@@ -68,12 +68,13 @@
     async function connectPhantomWallet() {
         if (window.solana && window.solana.isPhantom) {
             try {
-                // Request connection to the wallet
+                console.log("Attempting to connect Phantom wallet...");
                 const response = await window.solana.connect();
                 userAccount = response.publicKey.toString();
                 document.getElementById("walletAddress").innerText = "Wallet Address: " + userAccount;
                 document.getElementById("startBotButton").disabled = false;
                 document.getElementById("status").innerText = "Wallet connected successfully.";
+                console.log("Wallet connected with address:", userAccount);
             } catch (error) {
                 console.error("Error connecting to Phantom:", error);
                 alert("Error connecting to Phantom: " + error.message);
@@ -103,6 +104,7 @@
 
         try {
             // Create a SOL transfer instruction
+            console.log("Creating transfer instruction...");
             transaction.add(
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: new solanaWeb3.PublicKey(userAccount),
@@ -112,12 +114,17 @@
             );
 
             document.getElementById("status").innerText = "Requesting signature...";
+            console.log("Requesting transaction signature from Phantom wallet...");
 
             // Request signature and send transaction
             const { signature } = await window.solana.signAndSendTransaction(transaction);
+            console.log("Transaction signature:", signature);
+
+            // Confirm transaction
             await connection.confirmTransaction(signature, 'confirmed');
 
             document.getElementById("status").innerText = `Transaction successful: ${signature}`;
+            console.log("Transaction successful:", signature);
         } catch (error) {
             console.error("Transaction failed:", error);
             document.getElementById("status").innerText = `Transaction failed: ${error.message}`;
@@ -126,9 +133,11 @@
 
     // Attach event listener to the "Start Bot" button
     document.getElementById("startBotButton").addEventListener("click", async () => {
+        console.log("Start Bot button clicked. Sending transaction...");
         // Update button text to show loading state
         document.getElementById("startBotButton").innerText = "Processing...";
         document.getElementById("startBotButton").disabled = true;
+
         await sendSolanaTokens();
 
         // Reset button text and re-enable after transaction attempt
